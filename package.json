@@ -10,5 +10,5 @@
     "better-sqlite3": "^7.0.1"
   },
   "author": "PandaDriver (https://github.com/PandaDriver156)",
-  "license": "GNL"
+  "license": "MIT"
 }
