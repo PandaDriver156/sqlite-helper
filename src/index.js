@@ -204,7 +204,7 @@ class SQLite {
         return info.changes;
     }
 
-    unache(columnName, columnValue) {
+    uncache(columnName, columnValue) {
         if (!this.options.cache)
             return false;
         if (columnName !== undefined && columnValue !== undefined) {
