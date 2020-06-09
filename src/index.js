@@ -145,8 +145,17 @@ class SQLite {
         }
         else {
             let columnNamesString = columnNames.join(', ');
-            values = columnNames.map(columnName => options.columns[columnName]);
-            response = this.db.prepare(`INSERT INTO ${this.name} (${columnNamesString}) VALUES (?)`).run(values);
+            values = columnNames.map(columnName => {
+                let value = options.columns[columnName];
+                if (value.constructor === Object)
+                    value = JSON.stringify(value);
+                return value;
+            });
+            const questionMarks = [];
+            for (let i = 0; i < values.length; i++) {
+                questionMarks.push('?');
+            }
+            response = this.db.prepare(`INSERT INTO ${this.name} (${columnNamesString}) VALUES (${questionMarks.join(', ')})`).run(values);
         }
 
         if (this.options.caching)
@@ -154,7 +163,7 @@ class SQLite {
 
         if (typeof this.changedCB == 'function') {
             let newCacheValue = oldCacheValue;
-            for(let key in options.columns) {
+            for (let key in options.columns) {
                 newCacheValue[key] = options.columns[key];
             }
             this.changedCB(newCacheValue);
