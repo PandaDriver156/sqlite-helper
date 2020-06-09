@@ -117,7 +117,7 @@ class SQLite {
                 let value = options.columns[columnName];
                 if (value.constructor === Object)
                     value = JSON.stringify(value);
-                values.push(options.columns[columnName]);
+                values.push(value);
                 return `${columnName} = ?`;
             }).join(', ');
             let whereStatement = "WHERE " + Object.keys(options.where).map(whereCheck => {
