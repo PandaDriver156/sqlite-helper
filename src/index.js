@@ -76,11 +76,11 @@ class SQLite {
         }
         response = this.db.prepare(`SELECT * FROM ${this.name} WHERE ${columnName} = ?`).get(columnValue);
 
-        for(let key in response) {
+        for (let key in response) {
             try {
                 response[key] = JSON.parse(response[key]);
             } catch {
-                
+
             }
         }
 
@@ -125,7 +125,7 @@ class SQLite {
             columnsStatement = columnNames.map(columnName => {
                 let value = options.columns[columnName];
                 if (value.constructor === Object)
-                    value = JSON.stringify(value);
+                    value = stringify(value, null, 2);
                 values.push(value);
                 return `${columnName} = ?`;
             }).join(', ');
@@ -157,7 +157,7 @@ class SQLite {
             values = columnNames.map(columnName => {
                 let value = options.columns[columnName];
                 if (value.constructor === Object)
-                    value = JSON.stringify(value);
+                    value = stringify(value, null, 2);
                 return value;
             });
             const questionMarks = [];
@@ -170,15 +170,16 @@ class SQLite {
         if (this.options.caching)
             this.cache.push(options.columns);
 
+        let valuesObject = oldCacheValue || {};
+
+        for (let key in options.columns) {
+            valuesObject[key] = options.columns[key];
+        }
         if (typeof this.changedCB == 'function') {
-            let newCacheValue = oldCacheValue || {};
-            for (let key in options.columns) {
-                newCacheValue[key] = options.columns[key];
-            }
-            this.changedCB(newCacheValue);
+            this.changedCB(valuesObject);
         }
 
-        return !!response.changes ? options.columns : false;
+        return !!response.changes ? valuesObject : false;
 
     }
 
