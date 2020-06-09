@@ -113,6 +113,9 @@ class SQLite {
         if (options.where) {
             let whereValues = [];
             columnsStatement = columnNames.map(columnName => {
+                let value = options.columns[columnName];
+                if (value.constructor === Object)
+                    value = JSON.stringify(value);
                 values.push(options.columns[columnName]);
                 return `${columnName} = ?`;
             }).join(', ');
@@ -122,6 +125,8 @@ class SQLite {
             }).join(' AND');
 
             response = this.db.prepare(`UPDATE ${this.name} SET ${columnsStatement} ${whereStatement}`).run(values, whereValues);
+
+            let oldCacheValue;
             if (this.options.caching) {
 
                 // Remove the old value from the cache
@@ -129,8 +134,8 @@ class SQLite {
                     const value = this.cache[i];
 
                     for (let key in options.where) {
-                        console.log(key);
-                        if (value === options.where[key]) {
+                        if (value[key] === options.where[key]) {
+                            oldCacheValue = value;
                             this.cache.splice(i, 1);
                             break;
                         }
@@ -146,6 +151,14 @@ class SQLite {
 
         if (this.options.caching)
             this.cache.push(options.columns);
+
+        if (typeof this.changedCB == 'function') {
+            let newCacheValue = oldCacheValue;
+            for(let key in options.columns) {
+                newCacheValue[key] = options.columns[key];
+            }
+            this.changedCB(newCacheValue);
+        }
 
         return !!response.changes ? options.columns : false;
 
@@ -168,6 +181,17 @@ class SQLite {
 
     delete(columnName, columnValue) {
         const info = this.db.prepare(`DELETE FROM ${this.name} WHERE ${columnName} = ?`).run(columnValue);
+        if (this.options.caching) {
+            const columnObject = {};
+            columnObject[columnName] = columnValue;
+            for (let i = 0; i < this.cache.length; i++) {
+                const value = this.cache[i];
+
+                if (stringify(value) === stringify(columnObject)) {
+                    this.cache.splice(i, 1);
+                }
+            }
+        }
         return info.changes;
     }
 
@@ -178,8 +202,9 @@ class SQLite {
             // Remove the value from the cache
             for (let i = 0; i < this.cache.length; i++) {
                 const value = this.cache[i];
-
-                if (stringify(value) === stringify(columnValue)) {
+                const columnObject = {};
+                columnObject[columnName] = columnValue;
+                if (stringify(value) === stringify(columnObject)) {
                     this.cache.splice(i, 1);
                     return true;
                 }
@@ -193,9 +218,13 @@ class SQLite {
     }
 
     indexes(columnName) {
-        const response = this.db.prepare(`SELECT ${columnName} FROM ${this.name}`).get();
-        
-        return response;
+        const response = this.db.prepare(`SELECT ${columnName} FROM ${this.name}`).all();
+
+        return response.map(row => row[columnName]);
+    }
+
+    changed(cb) {
+        this.changedCB = cb;
     }
 }
 
