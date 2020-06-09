@@ -110,6 +110,7 @@ class SQLite {
         let columnsStatement;
 
         let response;
+        let oldCacheValue;
         if (options.where) {
             let whereValues = [];
             columnsStatement = columnNames.map(columnName => {
@@ -126,7 +127,6 @@ class SQLite {
 
             response = this.db.prepare(`UPDATE ${this.name} SET ${columnsStatement} ${whereStatement}`).run(values, whereValues);
 
-            let oldCacheValue;
             if (this.options.caching) {
 
                 // Remove the old value from the cache
