@@ -75,6 +75,15 @@ class SQLite {
                 return cacheResult;
         }
         response = this.db.prepare(`SELECT * FROM ${this.name} WHERE ${columnName} = ?`).get(columnValue);
+
+        for(let key in response) {
+            try {
+                response[key] = JSON.parse(response[key]);
+            } catch {
+                
+            }
+        }
+
         if (response)
             this.cache.push(response);
 
