@@ -101,7 +101,7 @@ class SQLite {
         options = options || {};
         if (!options.columns) {
             options.columns = options;
-            options.where
+            delete options.where;
         }
         let columnNames = Object.keys(options.columns);
         let values = [];
@@ -162,7 +162,7 @@ class SQLite {
             this.cache.push(options.columns);
 
         if (typeof this.changedCB == 'function') {
-            let newCacheValue = oldCacheValue;
+            let newCacheValue = oldCacheValue || {};
             for (let key in options.columns) {
                 newCacheValue[key] = options.columns[key];
             }
