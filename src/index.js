@@ -124,7 +124,7 @@ class SQLite {
             let whereValues = [];
             columnsStatement = columnNames.map(columnName => {
                 let value = options.columns[columnName];
-                if (value.constructor === Object)
+                if (value.constructor === Object || value.constructor === Array)
                     value = stringify(value, null, 2);
                 values.push(value);
                 return `${columnName} = ?`;
@@ -156,7 +156,7 @@ class SQLite {
             let columnNamesString = columnNames.join(', ');
             values = columnNames.map(columnName => {
                 let value = options.columns[columnName];
-                if (value.constructor === Object)
+                if (value.constructor === Object || value.constructor === Array)
                     value = stringify(value, null, 2);
                 return value;
             });
