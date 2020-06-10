@@ -16,6 +16,7 @@ class SQLite {
     * @param {String} options.tableName The name of the table which SQLite should use 
     * Note: You cannot work with multiple tables in one SQLite, you should create a separate SQLite for that.
     * @param {Object} options.columns 
+    * @param {Boolean} options.wal Enable wal mode, defaults to `false`. (Read more about that here: https://www.sqlite.org/wal.html)
     */
     constructor(options) {
 
@@ -42,6 +43,11 @@ class SQLite {
         let columnsStatement = Object.keys(options.columns).map(columnName => {
             return `${columnName} ${options.columns[columnName].type}`;
         });
+
+        options.wal = options.wal === undefined ? true : options.wal;
+
+        if(options.wal)
+            this.db.pragma('journal_mode = wal');
 
         const table = this.db.prepare("SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = ?").get(this.name);
 
@@ -125,7 +131,7 @@ class SQLite {
             columnsStatement = columnNames.map(columnName => {
                 let value = options.columns[columnName];
                 if (value.constructor === Object || value.constructor === Array)
-                    value = stringify(value, null, 2);
+                    value = stringify(value);
                 values.push(value);
                 return `${columnName} = ?`;
             }).join(', ');
@@ -157,7 +163,7 @@ class SQLite {
             values = columnNames.map(columnName => {
                 let value = options.columns[columnName];
                 if (value.constructor === Object || value.constructor === Array)
-                    value = stringify(value, null, 2);
+                    value = stringify(value);
                 return value;
             });
             const questionMarks = [];
