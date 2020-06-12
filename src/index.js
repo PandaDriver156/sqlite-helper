@@ -4,19 +4,30 @@ const { resolve } = require('path');
 const SQLiteError = require('./error');
 
 const { stringify } = JSON;
-
+/**
+ * A tool to make interactions with sqlite databases easier
+ */
 class SQLite {
     /**
-    * @param {Object} options Options for SQLite.
-    * @param {Boolean} options.caching Toggle whether to enable caching. Default to `true`.
-    * @param {Boolean} options.fetchAll Wheter to fetch all rows of the sqlite database on initialization, defaults to `false`. 
+    * @param {object} [options = {}] Options for SQLite.
+    * @param {boolean} [options.caching = true] Toggle whether to enable caching.
+    * @param {boolean} [options.fetchAll = false] Whether to fetch all rows of the sqlite database on initialization.
     * Note: This option cannot be set to `true` if `options.caching` is `true`.
-    * @param {String} options.dir The directory where the sqlite file is/will be located. Defaults to `./data`.
-    * @param {String} options.filename The name of the file where the sqlite database is/should be saved. Defaults to `sqlite.db`
-    * @param {String} options.tableName The name of the table which SQLite should use 
+    * @param {string} [options.dir = ./data] The directory where the sqlite file is/will be located.
+    * @param {string} [options.filename = sqlite.db] The name of the file where the sqlite database is/should be saved.
+    * @param {string} [options.tableName = database] The name of the table which SQLite should use.
     * Note: You cannot work with multiple tables in one SQLite, you should create a separate SQLite for that.
-    * @param {Object} options.columns 
-    * @param {Boolean} options.wal Enable wal mode, defaults to `false`. (Read more about that here: https://www.sqlite.org/wal.html)
+    * @param {object} [options.columns = []] The columns that should be created on the table if it doesn't exist.
+    * @param {boolean} [options.wal = false] Whether to enable wal mode. (Read more about that [here](https://www.sqlite.org/wal.html))
+    * @example
+    * const db = new SQLite({
+    *   tableName: "foods",
+    *   columns: {
+    *       name: "text",
+    *       price: "int"
+    *   },
+    *   wal: true
+    * });
     */
     constructor(options) {
 
@@ -46,7 +57,7 @@ class SQLite {
 
         options.wal = options.wal === undefined ? true : options.wal;
 
-        if(options.wal)
+        if (options.wal)
             this.db.pragma('journal_mode = wal');
 
         const table = this.db.prepare("SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = ?").get(this.name);
@@ -72,84 +83,106 @@ class SQLite {
         });
     }
 
+    /**
+     * @param {string} columnName The name of the column to search by.
+     * @param {*} columnValue The value of the column to search by.
+     * @returns {*} The value retreived from the database.
+     */
     get(columnName, columnValue) {
-        let response;
+        let dbValue;
+        let cacheValue = {};
         if (this.options.caching) {
-            const cacheResult = this.cache.find(row => row[columnName] === columnValue);
+            for (let i = 0; i < this.cache.length; i++) {
+                const row = this.cache[i];
+                if (row[columnName] === columnValue) {
+                    cacheValue.result = row;
+                    cacheValue.index = i;
+                }
+            }
 
-            if (cacheResult)
-                return cacheResult;
+            if (cacheValue.result)
+                dbValue = cacheValue.result;
         }
-        response = this.db.prepare(`SELECT * FROM ${this.name} WHERE ${columnName} = ?`).get(columnValue);
+        if (!dbValue)
+            dbValue = this.db.prepare(`SELECT * FROM ${this.name} WHERE ${columnName} = ?`).get(columnValue);
 
-        for (let key in response) {
+        for (let key in dbValue) {
             try {
-                response[key] = JSON.parse(response[key]);
+                dbValue[key] = JSON.parse(dbValue[key]);
             } catch {
 
             }
         }
 
-        if (response)
-            this.cache.push(response);
+        // Save the value to the cache, or update the existing one
+        if (dbValue && this.options.caching) {
+            if (!cacheValue.result)
+                this.cache.push(dbValue);
+            else if (cacheValue.result !== dbValue)
+                this.cache[i] = dbValue;
+        }
 
 
-        return response;
+        return dbValue;
     }
 
     /**
-        @param {Object} where Column parameters which should be used to search rows by. If not provided, a new row will be inserted.
-        @param {Object} columns Columns to insert/modify
-        @example
-        sqlite.set({
-            where: {
-                first_name: 'Josh',
-                last_name: 'Smith'
-            },
-            columns: {
-                last_name: 'Jonas'
-            }
-        })
-    }
+     * @param {array|object} options
+     * @param {object} [options.where] Column parameters which should be used to search rows by. If not provided, a new row will be inserted.
+     * @param {object} options.columns Columns to insert/modify.
+     * @returns {object|boolean} The new column values of the row or `false` if no rows were modified. 
+     * NOTE: If caching is not enabled, only changed column values will be returned.
+     * @example
+     * sqlite.set({
+     *     where: {
+     *         first_name: 'Josh',
+     *         last_name: 'Smith'
+     *     },
+     *     columns: {
+     *         last_name: 'Jonas'
+     *     }
+     * })
     */
-    set(options) {
-        options = options || {};
-        if (!options.columns) {
-            options.columns = options;
-            delete options.where;
+    set(rows) {
+        if (!rows || (rows.constructor !== Object && rows.constructor !== Array)) {
+            const err =
+                new SQLiteError("No rows were provided or their type was invalid. To set a single row, an object should be given, or an array if multiple rows should be set.");
+            throw err;
         }
-        let columnNames = Object.keys(options.columns);
-        let values = [];
-        if (!options.columns || options.columns.constructor !== Object)
-            throw new SQLiteError(`No columns were provided. They are required to modify/create a row.`)
-        let columnsStatement;
 
-        let response;
-        let oldCacheValue;
-        if (options.where) {
-            let whereValues = [];
-            columnsStatement = columnNames.map(columnName => {
-                let value = options.columns[columnName];
-                if (value.constructor === Object || value.constructor === Array)
-                    value = stringify(value);
-                values.push(value);
-                return `${columnName} = ?`;
-            }).join(', ');
-            let whereStatement = "WHERE " + Object.keys(options.where).map(whereCheck => {
-                whereValues.push(options.where[whereCheck]);
-                return `${whereCheck} = ?`;
-            }).join(' AND');
+        if (rows.constructor === Object)
+            rows = [rows];
 
-            response = this.db.prepare(`UPDATE ${this.name} SET ${columnsStatement} ${whereStatement}`).run(values, whereValues);
+        const values = [];
+        const queries = [];
 
+        for (let row of rows) {
+            row = row || {};
+            if (!row.columns) {
+                const columns = row;
+                row = {
+                    columns: columns
+                };
+            }
+
+            const query = this._createQuery(row);
+            queries.push(query);
+        }
+
+        this._set(queries);
+
+
+        for (const row of rows) {
+
+            let oldCacheValue;
             if (this.options.caching) {
-
-                // Remove the old value from the cache
+                // Remove the old value from the cache 
+                // (only after writing the new value to the database, so that if writing the new value fails, the old cache value will not be removed)
                 for (let i = 0; i < this.cache.length; i++) {
                     const value = this.cache[i];
 
-                    for (let key in options.where) {
-                        if (value[key] === options.where[key]) {
+                    for (const key in row.where) {
+                        if (value[key] === row.where[key]) {
                             oldCacheValue = value;
                             this.cache.splice(i, 1);
                             break;
@@ -157,42 +190,48 @@ class SQLite {
                     }
                 }
             }
-        }
-        else {
-            let columnNamesString = columnNames.join(', ');
-            values = columnNames.map(columnName => {
-                let value = options.columns[columnName];
-                if (value.constructor === Object || value.constructor === Array)
-                    value = stringify(value);
-                return value;
-            });
-            const questionMarks = [];
-            for (let i = 0; i < values.length; i++) {
-                questionMarks.push('?');
+
+            let valuesObject = oldCacheValue || {};
+
+            for (const key in row.columns) {
+                valuesObject[key] = row.columns[key];
             }
-            response = this.db.prepare(`INSERT INTO ${this.name} (${columnNamesString}) VALUES (${questionMarks.join(', ')})`).run(values);
+
+            if (this.options.caching) {
+                this.cache.push(valuesObject);
+            }
+
+            if (typeof this.changedCB === 'function') {
+                this.changedCB(valuesObject);
+            }
+            values.push(valuesObject);
         }
 
-        if (this.options.caching)
-            this.cache.push(options.columns);
+        let returnValue = values; // By default, the returned value will be the array of values.
+        if (returnValue.length === 1) // If the array only has one value, only return its first element.
+            returnValue = returnValue[0];
 
-        let valuesObject = oldCacheValue || {};
 
-        for (let key in options.columns) {
-            valuesObject[key] = options.columns[key];
-        }
-        if (typeof this.changedCB == 'function') {
-            this.changedCB(valuesObject);
-        }
-
-        return !!response.changes ? valuesObject : false;
+        return returnValue;
 
     }
 
+    /**
+     * @param {string} columnName The name of the column to search by.
+     * @param {*} columnValue The value of the column to search by.
+     * @returns {boolean} Whether a row with the provided column name and value exists.
+     */
     has(columnName, columnValue) {
         return !!this.get(columnName, columnValue);
     }
 
+    /**
+     * Ensures that a value exists in the database
+     * @param {string} columnName The name of the column to search by.
+     * @param {*} columnValue The value of the column to search by.
+     * @param {object} ensureValue The value if the columns.
+     * @returns {*} 
+     */
     ensure(columnName, columnValue, ensureValue) {
         let value = this.get(columnName, columnValue);
 
@@ -204,6 +243,12 @@ class SQLite {
         return value;
     }
 
+    /**
+     * Deletes a single or multiple rows from the database.
+     * @param {string} columnName The name of the column to search by.
+     * @param {*} columnValue The value of the column to search by.
+     * @returns {number} The number of rows that were deleted.
+     */
     delete(columnName, columnValue) {
         const info = this.db.prepare(`DELETE FROM ${this.name} WHERE ${columnName} = ?`).run(columnValue);
         if (this.options.caching) {
@@ -220,6 +265,12 @@ class SQLite {
         return info.changes;
     }
 
+    /**
+     * Removes a single value (or all values if no arguments are provided) from the cache.
+     * @param {string} [columnName] The name of the column to search by.
+     * @param {*} [columnValue] The value of the column to search by.
+     * @returns {boolean} Whether the deletion was successful.
+     */
     uncache(columnName, columnValue) {
         if (!this.options.cache)
             return false;
@@ -234,22 +285,82 @@ class SQLite {
                     return true;
                 }
             }
+            // If the value was not found, return false as the deletion was not successful
+            return false;
         }
 
-        else
+        else {
             this.cache.length = [];
-
-        return !this.cache.length;
+            return !this.cache.length;
+        }
     }
 
     indexes(columnName) {
-        const response = this.db.prepare(`SELECT ${columnName} FROM ${this.name}`).all();
+        const dbValue = this.db.prepare(`SELECT ${columnName} FROM ${this.name}`).all();
 
-        return response.map(row => row[columnName]);
+        return dbValue.map(row => row[columnName]);
     }
 
     changed(cb) {
         this.changedCB = cb;
+    }
+
+    _createQuery(row) {
+        let columnNames = Object.keys(row.columns);
+        let values = [];
+        if (!row.columns || row.columns.constructor !== Object)
+            throw new SQLiteError(`No columns were provided. They are required to modify/create a row.`)
+        let columnsStatement;
+        let whereValues = [];
+
+        let query;
+        if (row.where) {
+            columnsStatement = columnNames.map(columnName => {
+                let value = row.columns[columnName];
+                if (value.constructor === Object || value.constructor === Array)
+                    value = stringify(value);
+                values.push(value);
+                return `${columnName} = ?`;
+            }).join(', ');
+            let whereStatement = "WHERE " + Object.keys(row.where).map(whereCheck => {
+                whereValues.push(row.where[whereCheck]);
+                return `${whereCheck} = ?`;
+            }).join(' AND');
+            query = `UPDATE ${this.name} SET ${columnsStatement} ${whereStatement}`;
+        }
+        else {
+            let columnNamesString = columnNames.join(', ');
+            values = columnNames.map(columnName => {
+                let value = row.columns[columnName];
+                console.log(value)
+                if (value.constructor === Object || value.constructor === Array)
+                    value = stringify(value);
+                return value;
+            });
+            const questionMarks = Array(values.length).fill('?');
+            query = `INSERT INTO ${this.name} (${columnNamesString}) VALUES (${questionMarks.join(', ')})`;
+        }
+
+        return {
+            query: query,
+            values: values,
+            whereValues: whereValues
+        };
+    }
+
+    _set(rows) {
+        const infos = [];
+        const transaction = this.db.transaction(() => {
+            for (let row of rows) {
+                const { query, values, whereValues } = row;
+                const stmt = this.db.prepare(query);
+                const info = stmt.run(values, whereValues);
+                infos.push(info);
+            }
+        });
+        transaction();
+
+        return infos;
     }
 }
 
