@@ -22,7 +22,7 @@ A tool to make interactions with sqlite databases easier
 | --- | --- | --- | --- |
 | [options] | <code>object</code> | <code>{}</code> | Options for SQLite. |
 | [options.caching] | <code>boolean</code> | <code>true</code> | Toggle whether to enable caching. |
-| [options.fetchAll] | <code>boolean</code> | <code>false</code> | Whether to fetch all rows of the sqlite database on initialization. Note: This option cannot be set to `true` if `options.caching` is `true`. |
+| [options.fetchAll] | <code>boolean</code> | <code>false</code> | Whether to fetch all rows of the sqlite database on initialization. Note: This option cannot be set to `true` if `options.caching` is `false`. |
 | [options.dir] | <code>string</code> | <code>&quot;./data&quot;</code> | The directory where the sqlite file is/will be located. |
 | [options.filename] | <code>string</code> | <code>&quot;sqlite.db&quot;</code> | The name of the file where the sqlite database is/should be saved. |
 | [options.tableName] | <code>string</code> | <code>&quot;database&quot;</code> | The name of the table which SQLite should use. Note: You cannot work with multiple tables in one SQLite, you should create a separate SQLite for that. |
@@ -31,7 +31,14 @@ A tool to make interactions with sqlite databases easier
 
 **Example**  
 ```js
-const db = new SQLite({  tableName: "foods",  columns: {      name: "text",      price: "int"  },  wal: true});
+const db = new SQLite({
+  tableName: "foods",
+  columns: {
+      name: "text",
+      price: "int"
+  },
+  wal: true
+});
 ```
 <a name="SQLite+get"></a>
 
@@ -48,7 +55,8 @@ const db = new SQLite({  tableName: "foods",  columns: {      name: "text", 
 
 ### sqLite.set(options) ⇒ <code>object</code> \| <code>boolean</code>
 **Kind**: instance method of [<code>SQLite</code>](#SQLite)  
-**Returns**: <code>object</code> \| <code>boolean</code> - The new column values of the row or `false` if no rows were modified. NOTE: If caching is not enabled, only changed column values will be returned.  
+**Returns**: <code>object</code> \| <code>boolean</code> - The new column values of the row or `false` if no rows were modified. 
+NOTE: If caching is not enabled, only changed column values will be returned.  
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -58,7 +66,15 @@ const db = new SQLite({  tableName: "foods",  columns: {      name: "text", 
 
 **Example**  
 ```js
-sqlite.set({    where: {        first_name: 'Josh',        last_name: 'Smith'    },    columns: {        last_name: 'Jonas'    }})
+sqlite.set({
+    where: {
+        first_name: 'Josh',
+        last_name: 'Smith'
+    },
+    columns: {
+        last_name: 'Jonas'
+    }
+})
 ```
 <a name="SQLite+has"></a>
 
@@ -83,7 +99,6 @@ Ensures that a value exists in the database
 | columnName | <code>string</code> | The name of the column to search by. |
 | columnValue | <code>\*</code> | The value of the column to search by. |
 | ensureValue | <code>object</code> | The value if the columns. |
-
 <a name="SQLite+delete"></a>
 
 ### sqLite.delete(columnName, columnValue) ⇒ <code>number</code>
@@ -93,7 +108,6 @@ Deletes a single or multiple rows from the database.
 **Returns**: <code>number</code> - The number of rows that were deleted.  
 
 | Param | Type | Description |
-| --- | --- | --- |
 | columnName | <code>string</code> | The name of the column to search by. |
 | columnValue | <code>\*</code> | The value of the column to search by. |
 
