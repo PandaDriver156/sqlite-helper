@@ -12,7 +12,7 @@ class SQLite {
     * @param {object} [options = {}] Options for SQLite.
     * @param {boolean} [options.caching = true] Toggle whether to enable caching.
     * @param {boolean} [options.fetchAll = false] Whether to fetch all rows of the sqlite database on initialization.
-    * Note: This option cannot be set to `true` if `options.caching` is `true`.
+    * Note: This option cannot be set to `true` if `options.caching` is `false`.
     * @param {string} [options.dir = ./data] The directory where the sqlite file is/will be located.
     * @param {string} [options.filename = sqlite.db] The name of the file where the sqlite database is/should be saved.
     * @param {string} [options.tableName = database] The name of the table which SQLite should use.
@@ -55,7 +55,7 @@ class SQLite {
             return `${columnName} ${options.columns[columnName].type}`;
         });
 
-        options.wal = options.wal === undefined ? true : options.wal;
+        options.wal = options.wal === undefined ? true : !!options.wal;
 
         if (options.wal)
             this.db.pragma('journal_mode = wal');
@@ -70,17 +70,32 @@ class SQLite {
         }
 
 
-        options.caching = options.caching === undefined ? true : options.caching;
+        options.caching = options.caching === undefined ? true : !!options.caching;
 
         if (options.caching)
             Object.defineProperty(this, "cache", {
                 value: []
             });
 
+        options.fetchAll = options.fetchAll === undefined ? true : !!options.fetchAll;
 
-        Object.defineProperty(this, "options", {
-            value: options
-        });
+        if (options.fetchAll) {
+            if(!options.caching) {
+                const err = new SQLiteError("The fetchAll options was enabled but caching was not. \
+It's impossible to fetch all values and save them to the cache if the cache doesn't exist. \
+Either disable fetchAll or enable caching.");
+                throw err;
+            }
+            const allRows = this.db.prepare(`SELECT * FROM ${this.name}`).all();
+            for(const row of allRows) {
+                this.cache.push(row);
+            }
+        }
+
+
+            Object.defineProperty(this, "options", {
+                value: options
+            });
     }
 
     /**
