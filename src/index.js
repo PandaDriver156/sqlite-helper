@@ -190,7 +190,7 @@ Either disable fetchAll or enable caching.");
         for (const row of rows) {
 
             let oldCacheValue;
-            if (this.options.caching) {
+            if (this.options.caching && row.where) {
                 // Remove the old value from the cache 
                 // (only after writing the new value to the database, so that if writing the new value fails, the old cache value will not be removed)
                 for (let i = 0; i < this.cache.length; i++) {
@@ -347,7 +347,6 @@ Either disable fetchAll or enable caching.");
             let columnNamesString = columnNames.join(', ');
             values = columnNames.map(columnName => {
                 let value = row.columns[columnName];
-                console.log(value)
                 if (value.constructor === Object || value.constructor === Array)
                     value = stringify(value);
                 return value;
