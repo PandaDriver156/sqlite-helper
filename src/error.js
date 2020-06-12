@@ -1,5 +1,5 @@
 class SQLiteError extends Error {
-    constructor(message, errorName = "SQLiteError") {
+    constructor(message, errorName = "SQLiteHelperError") {
         super();
 
         this.name = errorName;
