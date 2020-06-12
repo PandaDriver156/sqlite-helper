@@ -31,14 +31,7 @@ A tool to make interactions with sqlite databases easier
 
 **Example**  
 ```js
-const db = new SQLite({
-  tableName: "foods",
-  columns: {
-      name: "text",
-      price: "int"
-  },
-  wal: true
-});
+const db = new SQLite({  tableName: "foods",  columns: {      name: "text",      price: "int"  },  wal: true});
 ```
 <a name="SQLite+get"></a>
 
@@ -55,8 +48,7 @@ const db = new SQLite({
 
 ### sqLite.set(options) ⇒ <code>object</code> \| <code>boolean</code>
 **Kind**: instance method of [<code>SQLite</code>](#SQLite)  
-**Returns**: <code>object</code> \| <code>boolean</code> - The new column values of the row or `false` if no rows were modified. 
-NOTE: If caching is not enabled, only changed column values will be returned.  
+**Returns**: <code>object</code> \| <code>boolean</code> - The new column values of the row or `false` if no rows were modified. NOTE: If caching is not enabled, only changed column values will be returned.  
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -66,15 +58,7 @@ NOTE: If caching is not enabled, only changed column values will be returned.
 
 **Example**  
 ```js
-sqlite.set({
-    where: {
-        first_name: 'Josh',
-        last_name: 'Smith'
-    },
-    columns: {
-        last_name: 'Jonas'
-    }
-})
+sqlite.set({    where: {        first_name: 'Josh',        last_name: 'Smith'    },    columns: {        last_name: 'Jonas'    }})
 ```
 <a name="SQLite+has"></a>
 
@@ -115,6 +99,7 @@ Deletes a single or multiple rows from the database.
 
 <a name="SQLite+uncache"></a>
 
+### sqLite.uncache([columnName], [columnValue]) ⇒ <code>boolean</code>
 Removes a single value (or all values if no arguments are provided) from the cache.
 
 **Kind**: instance method of [<code>SQLite</code>](#SQLite)  
