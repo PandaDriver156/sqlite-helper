@@ -1,14 +1,25 @@
 {
   "name": "sqlite-helper",
   "version": "0.0.1",
-  "description": "A tool to make interactions with sqlite3 databases easier",
+  "description": "A tool to make interactions with sqlite databases easier",
   "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "docs": "node ./docs/build.js"
   },
   "dependencies": {
     "better-sqlite3": "^7.0.1"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PandaDriver156/sqlite-helper.git"
+  },
+  "bugs": {
+    "url": "https://github.com/PandaDriver156/sqliter-helper/issues"
+  },
   "author": "PandaDriver (https://github.com/PandaDriver156)",
-  "license": "MIT"
+  "homepage": "https://github.com/PandaDriver156/sqlite-helper",
+  "license": "MIT",
+  "devDependencies": {
+    "jsdoc-to-markdown": "^6.0.1"
+  }
 }
