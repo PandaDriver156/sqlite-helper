@@ -80,22 +80,22 @@ class SQLite {
         options.fetchAll = options.fetchAll === undefined ? true : !!options.fetchAll;
 
         if (options.fetchAll) {
-            if(!options.caching) {
+            if (!options.caching) {
                 const err = new SQLiteError("The fetchAll options was enabled but caching was not. \
 It's impossible to fetch all values and save them to the cache if the cache doesn't exist. \
 Either disable fetchAll or enable caching.");
                 throw err;
             }
             const allRows = this.db.prepare(`SELECT * FROM ${this.name}`).all();
-            for(const row of allRows) {
+            for (const row of allRows) {
                 this.cache.push(row);
             }
         }
 
 
-            Object.defineProperty(this, "options", {
-                value: options
-            });
+        Object.defineProperty(this, "options", {
+            value: options
+        });
     }
 
     /**
@@ -106,12 +106,13 @@ Either disable fetchAll or enable caching.");
     get(columnName, columnValue) {
         let dbValue;
         let cacheValue = {};
-        if (this.options.caching) {
+        if (this.options.caching) { // Check if the row exists in the cache
             for (let i = 0; i < this.cache.length; i++) {
                 const row = this.cache[i];
                 if (row[columnName] === columnValue) {
                     cacheValue.result = row;
                     cacheValue.index = i;
+                    break;
                 }
             }
 
@@ -134,7 +135,7 @@ Either disable fetchAll or enable caching.");
             if (!cacheValue.result)
                 this.cache.push(dbValue);
             else if (cacheValue.result !== dbValue)
-                this.cache[i] = dbValue;
+                this.cache[cacheValue.index] = dbValue;
         }
 
 
@@ -210,6 +211,11 @@ Either disable fetchAll or enable caching.");
 
             for (const key in row.columns) {
                 valuesObject[key] = row.columns[key];
+            }
+            for (let key in valuesObject) {
+                try {
+                    valuesObject[key] = JSON.parse(valuesObject[key]);
+                } catch { }
             }
 
             if (this.options.caching) {
