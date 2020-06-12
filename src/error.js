@@ -1,4 +1,4 @@
-class SQLiteError extends Error {
+class SQLiteHelperError extends Error {
     constructor(message, errorName = "SQLiteHelperError") {
         super();
 
@@ -7,4 +7,4 @@ class SQLiteError extends Error {
     }
 }
 
-module.exports = SQLiteError;
+module.exports = SQLiteHelperError;
