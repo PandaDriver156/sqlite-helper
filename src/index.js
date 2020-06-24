@@ -123,13 +123,7 @@ Either disable fetchAll or enable caching.");
         if (!dbValue)
             dbValue = this.db.prepare(`SELECT * FROM ${this.name} WHERE ${columnName} = ?`).get(columnValue);
 
-        for (let key in dbValue) {
-            try {
-                dbValue[key] = parse(dbValue[key]);
-            } catch {
-
-            }
-        }
+        dbValue = this._parseKeys(dbValue);
 
         // Save the value to the cache, or update the existing one
         if (dbValue && this.options.caching) {
@@ -149,16 +143,8 @@ Either disable fetchAll or enable caching.");
     getAll() {
         const values = this.db.prepare(`SELECT * FROM ${this.name}`).all();
 
-        for (let i = 0; i < values.length; i++) {
-            const value = values[i];
-            for (let key in value) {
-                try {
-                    value[key] = parse(value[key]);
-                } catch {
-
-                }
-            }
-        }
+        for (let i = 0; i < values.length; i++)
+            values[i] = this._parseKeys(values[i]);
 
         return values;
     }
@@ -234,11 +220,7 @@ Either disable fetchAll or enable caching.");
             for (const key in row.columns) {
                 valuesObject[key] = row.columns[key];
             }
-            for (let key in valuesObject) {
-                try {
-                    valuesObject[key] = JSON.parse(valuesObject[key]);
-                } catch { }
-            }
+            valuesObject = this._parseKeys(valuesObject);
 
             if (this.options.caching) {
                 this.cache.push(valuesObject);
@@ -345,14 +327,16 @@ Either disable fetchAll or enable caching.");
     }
 
     changed(cb) {
-        this.changedCB = cb;
+        Object.defineProperty(this, 'changedCB', {
+            value: cb
+        })
     }
 
     _createQuery(row) {
         let columnNames = Object.keys(row.columns);
         let values = [];
         if (!row.columns || row.columns.constructor !== Object)
-            throw new SQLiteError(`No columns were provided. They are required to modify/create a row.`)
+            throw new SQLiteError('No columns were provided. They are required to modify/create a row.')
         let columnsStatement;
         let whereValues = [];
 
@@ -403,6 +387,15 @@ Either disable fetchAll or enable caching.");
         transaction();
 
         return infos;
+    }
+
+    _parseKeys(object) {
+        for (let key in object) {
+            try {
+                object[key] = parse(object[key]);
+            } catch { }
+        }
+        return object;
     }
 }
 
