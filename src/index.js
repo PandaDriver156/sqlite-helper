@@ -3,7 +3,7 @@ const fs = require('fs');
 const { resolve } = require('path');
 const SQLiteError = require('./error');
 
-const { stringify } = JSON;
+const { stringify, parse } = JSON;
 /**
  * A tool to make interactions with sqlite databases easier
  */
@@ -34,7 +34,7 @@ class SQLite {
         options = options || {};
 
         options.dir = options.dir || './data';
-        if (!fs.existsSync(options.dir))
+        if (!fs.existsSync(options.dir)) // Check whether the provided folder exists and create it if it doesn't
             fs.mkdirSync(options.dir);
 
         options.filename = options.filename || 'sqlite.db';
@@ -101,11 +101,12 @@ Either disable fetchAll or enable caching.");
     /**
      * @param {string} columnName The name of the column to search by.
      * @param {*} columnValue The value of the column to search by.
-     * @returns {*} The value retreived from the database.
+     * @returns {*} The value retreived from the table.
      */
     get(columnName, columnValue) {
         let dbValue;
         let cacheValue = {};
+
         if (this.options.caching) { // Check if the row exists in the cache
             for (let i = 0; i < this.cache.length; i++) {
                 const row = this.cache[i];
@@ -124,7 +125,7 @@ Either disable fetchAll or enable caching.");
 
         for (let key in dbValue) {
             try {
-                dbValue[key] = JSON.parse(dbValue[key]);
+                dbValue[key] = parse(dbValue[key]);
             } catch {
 
             }
@@ -140,6 +141,26 @@ Either disable fetchAll or enable caching.");
 
 
         return dbValue;
+    }
+
+    /**
+     * @returns {object} All rows of the table.
+     */
+    getAll() {
+        const values = this.db.prepare(`SELECT * FROM ${this.name}`).all();
+
+        for (let i = 0; i < values.length; i++) {
+            const value = values[i];
+            for (let key in value) {
+                try {
+                    value[key] = parse(value[key]);
+                } catch {
+
+                }
+            }
+        }
+
+        return values;
     }
 
     /**
@@ -166,6 +187,7 @@ Either disable fetchAll or enable caching.");
             throw err;
         }
 
+        // If only a single row was given, convert it to an array for easier handling
         if (rows.constructor === Object)
             rows = [rows];
 
@@ -247,11 +269,11 @@ Either disable fetchAll or enable caching.");
     }
 
     /**
-     * Ensures that a value exists in the database
-     * @param {string} columnName The name of the column to search by.
-     * @param {*} columnValue The value of the column to search by.
-     * @param {object} ensureValue The value if the columns.
-     * @returns {*} 
+     * Ensures that a value exists in the table
+     * @param {string} columnName Name of the column to search by.
+     * @param {*} columnValue Value of the column to search by.
+     * @param {object} ensureValue Value of the columns to be ensured if the row does not exist.
+     * @returns {*} Ensured value
      */
     ensure(columnName, columnValue, ensureValue) {
         let value = this.get(columnName, columnValue);
@@ -265,10 +287,10 @@ Either disable fetchAll or enable caching.");
     }
 
     /**
-     * Deletes a single or multiple rows from the database.
-     * @param {string} columnName The name of the column to search by.
-     * @param {*} columnValue The value of the column to search by.
-     * @returns {number} The number of rows that were deleted.
+     * Deletes a single or multiple rows from the table.
+     * @param {string} columnName Name of the column to search by.
+     * @param {*} columnValue Value of the column to search by.
+     * @returns {number} Number of rows that were deleted.
      */
     delete(columnName, columnValue) {
         const info = this.db.prepare(`DELETE FROM ${this.name} WHERE ${columnName} = ?`).run(columnValue);
@@ -288,8 +310,8 @@ Either disable fetchAll or enable caching.");
 
     /**
      * Removes a single value (or all values if no arguments are provided) from the cache.
-     * @param {string} [columnName] The name of the column to search by.
-     * @param {*} [columnValue] The value of the column to search by.
+     * @param {string} [columnName] Name of the column to search by.
+     * @param {*} [columnValue] Value of the column to search by.
      * @returns {boolean} Whether the deletion was successful.
      */
     uncache(columnName, columnValue) {
