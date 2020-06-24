@@ -8,6 +8,7 @@ A tool to make interactions with sqlite databases easier
 * [SQLite](#SQLite)
     * [new SQLite([options])](#new_SQLite_new)
     * [.get(columnName, columnValue)](#SQLite+get) ⇒ <code>\*</code>
+    * [.getAll()](#SQLite+getAll) ⇒ <code>object</code>
     * [.set(options)](#SQLite+set) ⇒ <code>object</code> \| <code>boolean</code>
     * [.has(columnName, columnValue)](#SQLite+has) ⇒ <code>boolean</code>
     * [.ensure(columnName, columnValue, ensureValue)](#SQLite+ensure) ⇒ <code>\*</code>
@@ -31,32 +32,29 @@ A tool to make interactions with sqlite databases easier
 
 **Example**  
 ```js
-const db = new SQLite({
-  tableName: "foods",
-  columns: {
-      name: "text",
-      price: "int"
-  },
-  wal: true
-});
+const db = new SQLite({  tableName: "foods",  columns: {      name: "text",      price: "int"  },  wal: true});
 ```
 <a name="SQLite+get"></a>
 
 ### sqLite.get(columnName, columnValue) ⇒ <code>\*</code>
 **Kind**: instance method of [<code>SQLite</code>](#SQLite)  
-**Returns**: <code>\*</code> - The value retreived from the database.  
+**Returns**: <code>\*</code> - The value retreived from the table.  
 
 | Param | Type | Description |
 | --- | --- | --- |
 | columnName | <code>string</code> | The name of the column to search by. |
 | columnValue | <code>\*</code> | The value of the column to search by. |
 
+<a name="SQLite+getAll"></a>
+
+### sqLite.getAll() ⇒ <code>object</code>
+**Kind**: instance method of [<code>SQLite</code>](#SQLite)  
+**Returns**: <code>object</code> - All rows of the table.  
 <a name="SQLite+set"></a>
 
 ### sqLite.set(options) ⇒ <code>object</code> \| <code>boolean</code>
 **Kind**: instance method of [<code>SQLite</code>](#SQLite)  
-**Returns**: <code>object</code> \| <code>boolean</code> - The new column values of the row or `false` if no rows were modified. 
-NOTE: If caching is not enabled, only changed column values will be returned.  
+**Returns**: <code>object</code> \| <code>boolean</code> - The new column values of the row or `false` if no rows were modified. NOTE: If caching is not enabled, only changed column values will be returned.  
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -66,15 +64,7 @@ NOTE: If caching is not enabled, only changed column values will be returned.
 
 **Example**  
 ```js
-sqlite.set({
-    where: {
-        first_name: 'Josh',
-        last_name: 'Smith'
-    },
-    columns: {
-        last_name: 'Jonas'
-    }
-})
+sqlite.set({    where: {        first_name: 'Josh',        last_name: 'Smith'    },    columns: {        last_name: 'Jonas'    }})
 ```
 <a name="SQLite+has"></a>
 
@@ -90,26 +80,29 @@ sqlite.set({
 <a name="SQLite+ensure"></a>
 
 ### sqLite.ensure(columnName, columnValue, ensureValue) ⇒ <code>\*</code>
-Ensures that a value exists in the database
+Ensures that a value exists in the table
 
 **Kind**: instance method of [<code>SQLite</code>](#SQLite)  
+**Returns**: <code>\*</code> - Ensured value  
 
 | Param | Type | Description |
 | --- | --- | --- |
-| columnName | <code>string</code> | The name of the column to search by. |
-| columnValue | <code>\*</code> | The value of the column to search by. |
-| ensureValue | <code>object</code> | The value if the columns. |
+| columnName | <code>string</code> | Name of the column to search by. |
+| columnValue | <code>\*</code> | Value of the column to search by. |
+| ensureValue | <code>object</code> | Value of the columns to be ensured if the row does not exist. |
+
 <a name="SQLite+delete"></a>
 
 ### sqLite.delete(columnName, columnValue) ⇒ <code>number</code>
-Deletes a single or multiple rows from the database.
+Deletes a single or multiple rows from the table.
 
 **Kind**: instance method of [<code>SQLite</code>](#SQLite)  
-**Returns**: <code>number</code> - The number of rows that were deleted.  
+**Returns**: <code>number</code> - Number of rows that were deleted.  
 
 | Param | Type | Description |
-| columnName | <code>string</code> | The name of the column to search by. |
-| columnValue | <code>\*</code> | The value of the column to search by. |
+| --- | --- | --- |
+| columnName | <code>string</code> | Name of the column to search by. |
+| columnValue | <code>\*</code> | Value of the column to search by. |
 
 <a name="SQLite+uncache"></a>
 
@@ -121,6 +114,6 @@ Removes a single value (or all values if no arguments are provided) from the cac
 
 | Param | Type | Description |
 | --- | --- | --- |
-| [columnName] | <code>string</code> | The name of the column to search by. |
-| [columnValue] | <code>\*</code> | The value of the column to search by. |
+| [columnName] | <code>string</code> | Name of the column to search by. |
+| [columnValue] | <code>\*</code> | Value of the column to search by. |
 
