@@ -13,11 +13,11 @@ class SQLite {
     * @param {boolean} [options.caching = true] Toggle whether to enable caching.
     * @param {boolean} [options.fetchAll = false] Whether to fetch all rows of the sqlite database on initialization.
     * Note: This option cannot be set to `true` if `options.caching` is `false`.
-    * @param {string} [options.dir = ./data] The directory where the sqlite file is/will be located.
-    * @param {string} [options.filename = sqlite.db] The name of the file where the sqlite database is/should be saved.
-    * @param {string} [options.tableName = database] The name of the table which SQLite should use.
+    * @param {string} [options.dir = ./data] Directory where the sqlite file is/will be located.
+    * @param {string} [options.filename = sqlite.db] Name of the file where the sqlite database is/should be saved.
+    * @param {string} [options.tableName = database] Name of the table which SQLite should use.
     * Note: You cannot work with multiple tables in one SQLite, you should create a separate SQLite for that.
-    * @param {object} [options.columns = []] The columns that should be created on the table if it doesn't exist.
+    * @param {object} [options.columns = []] Columns that should be created on the table if it doesn't exist.
     * @param {boolean} [options.wal = false] Whether to enable wal mode. (Read more about that [here](https://www.sqlite.org/wal.html))
     * @example
     * const db = new SQLite({
@@ -86,7 +86,8 @@ It's impossible to fetch all values and save them to the cache if the cache does
 Either disable fetchAll or enable caching.");
                 throw err;
             }
-            const allRows = this.db.prepare(`SELECT * FROM ${this.name}`).all();
+
+            const allRows = this.getAll();
             for (const row of allRows) {
                 this.cache.push(row);
             }
@@ -99,9 +100,9 @@ Either disable fetchAll or enable caching.");
     }
 
     /**
-     * @param {string} columnName The name of the column to search by.
-     * @param {*} columnValue The value of the column to search by.
-     * @returns {*} The value retreived from the table.
+     * @param {string} columnName Name of the column to search by.
+     * @param {*} columnValue Value of the column to search by.
+     * @returns {*} Value retreived from the table.
      */
     get(columnName, columnValue) {
         let dbValue;
@@ -153,7 +154,7 @@ Either disable fetchAll or enable caching.");
      * @param {array|object} options
      * @param {object} [options.where] Column parameters which should be used to search rows by. If not provided, a new row will be inserted.
      * @param {object} options.columns Columns to insert/modify.
-     * @returns {object|boolean} The new column values of the row or `false` if no rows were modified. 
+     * @returns {object|boolean} New column values of the row or `false` if no rows were modified. 
      * NOTE: If caching is not enabled, only changed column values will be returned.
      * @example
      * sqlite.set({
@@ -242,8 +243,8 @@ Either disable fetchAll or enable caching.");
     }
 
     /**
-     * @param {string} columnName The name of the column to search by.
-     * @param {*} columnValue The value of the column to search by.
+     * @param {string} columnName Name of the column to search by.
+     * @param {*} columnValue Value of the column to search by.
      * @returns {boolean} Whether a row with the provided column name and value exists.
      */
     has(columnName, columnValue) {
