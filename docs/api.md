@@ -24,10 +24,10 @@ A tool to make interactions with sqlite databases easier
 | [options] | <code>object</code> | <code>{}</code> | Options for SQLite. |
 | [options.caching] | <code>boolean</code> | <code>true</code> | Toggle whether to enable caching. |
 | [options.fetchAll] | <code>boolean</code> | <code>false</code> | Whether to fetch all rows of the sqlite database on initialization. Note: This option cannot be set to `true` if `options.caching` is `false`. |
-| [options.dir] | <code>string</code> | <code>&quot;./data&quot;</code> | The directory where the sqlite file is/will be located. |
-| [options.filename] | <code>string</code> | <code>&quot;sqlite.db&quot;</code> | The name of the file where the sqlite database is/should be saved. |
-| [options.tableName] | <code>string</code> | <code>&quot;database&quot;</code> | The name of the table which SQLite should use. Note: You cannot work with multiple tables in one SQLite, you should create a separate SQLite for that. |
-| [options.columns] | <code>object</code> | <code>[]</code> | The columns that should be created on the table if it doesn't exist. |
+| [options.dir] | <code>string</code> | <code>&quot;./data&quot;</code> | Directory where the sqlite file is/will be located. |
+| [options.filename] | <code>string</code> | <code>&quot;sqlite.db&quot;</code> | Name of the file where the sqlite database is/should be saved. |
+| [options.tableName] | <code>string</code> | <code>&quot;database&quot;</code> | Name of the table which SQLite should use. Note: You cannot work with multiple tables in one SQLite, you should create a separate SQLite for that. |
+| [options.columns] | <code>object</code> | <code>[]</code> | Columns that should be created on the table if it doesn't exist. |
 | [options.wal] | <code>boolean</code> | <code>false</code> | Whether to enable wal mode. (Read more about that [here](https://www.sqlite.org/wal.html)) |
 
 **Example**  
@@ -38,12 +38,12 @@ const db = new SQLite({  tableName: "foods",  columns: {      name: "text", 
 
 ### sqLite.get(columnName, columnValue) ⇒ <code>\*</code>
 **Kind**: instance method of [<code>SQLite</code>](#SQLite)  
-**Returns**: <code>\*</code> - The value retreived from the table.  
+**Returns**: <code>\*</code> - Value retreived from the table.  
 
 | Param | Type | Description |
 | --- | --- | --- |
-| columnName | <code>string</code> | The name of the column to search by. |
-| columnValue | <code>\*</code> | The value of the column to search by. |
+| columnName | <code>string</code> | Name of the column to search by. |
+| columnValue | <code>\*</code> | Value of the column to search by. |
 
 <a name="SQLite+getAll"></a>
 
@@ -54,7 +54,7 @@ const db = new SQLite({  tableName: "foods",  columns: {      name: "text", 
 
 ### sqLite.set(options) ⇒ <code>object</code> \| <code>boolean</code>
 **Kind**: instance method of [<code>SQLite</code>](#SQLite)  
-**Returns**: <code>object</code> \| <code>boolean</code> - The new column values of the row or `false` if no rows were modified. NOTE: If caching is not enabled, only changed column values will be returned.  
+**Returns**: <code>object</code> \| <code>boolean</code> - New column values of the row or `false` if no rows were modified. NOTE: If caching is not enabled, only changed column values will be returned.  
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -74,8 +74,8 @@ sqlite.set({    where: {        first_name: 'Josh',        last_name: 'Smith'
 
 | Param | Type | Description |
 | --- | --- | --- |
-| columnName | <code>string</code> | The name of the column to search by. |
-| columnValue | <code>\*</code> | The value of the column to search by. |
+| columnName | <code>string</code> | Name of the column to search by. |
+| columnValue | <code>\*</code> | Value of the column to search by. |
 
 <a name="SQLite+ensure"></a>
 
