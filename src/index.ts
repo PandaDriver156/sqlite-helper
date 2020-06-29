@@ -1,23 +1,52 @@
-const Database = require('better-sqlite3');
-const fs = require('fs');
-const { resolve } = require('path');
-const SQLiteError = require('./error');
+import * as Database from 'better-sqlite3';
+import { PathLike, existsSync, mkdirSync } from 'fs'
+import { resolve } from 'path';
+import SQLiteHelperError from './error';
 
 const { stringify, parse } = JSON;
+
+interface LooseObject {
+    [key: string]: any
+}
+
+interface constructorOptions {
+    tableName?: string,
+    dir?: PathLike,
+    filename?: string,
+    columns?: LooseObject,
+    caching?: boolean,
+    fetchAll?: boolean
+    wal?: boolean
+}
+
 /**
  * A tool to make interactions with sqlite databases easier
  */
-class SQLite {
+class SQLiteHelper {
+
+    public readonly db: any;
+    public readonly name: string;
+    public readonly cache: LooseObject[] = [];
+    private changedCB: (...args: any) => any = () => { };
+
+    public tableName: string;
+    public dir: PathLike;
+    public filename: string;
+    public columns: LooseObject;
+    public caching: boolean;
+    public fetchAll: boolean;
+    public wal: boolean;
+
     /**
     * @param {object} [options = {}] Options for SQLite.
-    * @param {boolean} [options.caching = true] Toggle whether to enable caching.
-    * @param {boolean} [options.fetchAll = false] Whether to fetch all rows of the sqlite database on initialization.
-    * Note: This option cannot be set to `true` if `options.caching` is `false`.
+    * @param {string} [options.tableName = database] Name of the table which SQLite should use.
     * @param {string} [options.dir = ./data] Directory where the sqlite file is/will be located.
     * @param {string} [options.filename = sqlite.db] Name of the file where the sqlite database is/should be saved.
-    * @param {string} [options.tableName = database] Name of the table which SQLite should use.
     * Note: You cannot work with multiple tables in one SQLite, you should create a separate SQLite for that.
-    * @param {object} [options.columns = []] Columns that should be created on the table if it doesn't exist.
+    * @param {object} [options.columns = {}] Columns that should be created on the table if it doesn't exist.
+    * @param {boolean} [options.caching = true] Toggle whether to enable caching.
+    * @param {boolean} [options.fetchAll = false] Whether to fetch all rows of the sqlite database on initialization.
+    * Note: This option cannot be set to `true` if `options.caching` is `true`.
     * @param {boolean} [options.wal = false] Whether to enable wal mode. (Read more about that [here](https://www.sqlite.org/wal.html))
     * @example
     * const db = new SQLite({
@@ -29,59 +58,43 @@ class SQLite {
     *   wal: true
     * });
     */
-    constructor(options) {
+    constructor(options: constructorOptions) {
 
-        options = options || {};
+        this.tableName = options.tableName || "";
+        this.dir = options.dir || "./data";
+        this.filename = options.filename || "sqlite.db";
+        this.columns = options.columns || {};
+        this.caching = options.caching || true;
+        this.fetchAll = options.fetchAll || false;
+        this.wal = options.wal || false;
 
-        options.dir = options.dir || './data';
-        if (!fs.existsSync(options.dir)) // Check whether the provided folder exists and create it if it doesn't
-            fs.mkdirSync(options.dir);
+        if (!existsSync(this.dir)) // Check whether the provided folder exists 
+            mkdirSync(this.dir);   // Create it if it doesn't
 
-        options.filename = options.filename || 'sqlite.db';
-        const path = resolve(process.cwd(), `${options.dir}/${options.filename}`);
+        const path = resolve(process.cwd(), `${this.dir}/${this.filename}`);
 
-        Object.defineProperties(this, {
-            db: {
-                value: new Database(path)
-            },
-            name: {
-                value: options.tableName || "database"
-            }
-        });
+        this.db = new Database(path)
+        this.name = options.tableName || "database";
 
-        options.columns = options.columns || {};
-
-        let columnsStatement = Object.keys(options.columns).map(columnName => {
-            return `${columnName} ${options.columns[columnName].type}`;
-        });
-
-        options.wal = options.wal === undefined ? true : !!options.wal;
-
-        if (options.wal)
+        if (this.wal)
             this.db.pragma('journal_mode = wal');
 
         const table = this.db.prepare("SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = ?").get(this.name);
 
         if (!table['count(*)']) {
-            if (!columnsStatement.length)
-                throw new SQLiteError(`No columns were provided and the "${this.name}" table doesn't exist. Columns are required to ensure at table creation.`);
+            if (!Object.keys(this.columns).length)
+                throw new SQLiteHelperError(`No columns were provided and the "${this.name}" table doesn't exist. Columns are required to ensure at table creation.`);
+
+            let columnsStatement = Object.keys(this.columns).map(columnName => {
+                return `${columnName} ${this.columns[columnName].type}`;
+            });
 
             this.db.prepare(`CREATE TABLE ${this.name} (${columnsStatement.join(', ')})`).run();
         }
 
-
-        options.caching = options.caching === undefined ? true : !!options.caching;
-
-        if (options.caching)
-            Object.defineProperty(this, "cache", {
-                value: []
-            });
-
-        options.fetchAll = options.fetchAll === undefined ? true : !!options.fetchAll;
-
-        if (options.fetchAll) {
-            if (!options.caching) {
-                const err = new SQLiteError("The fetchAll options was enabled but caching was not. \
+        if (this.fetchAll) {
+            if (!this.caching) {
+                const err = new SQLiteHelperError("The fetchAll options was enabled but caching was not. \
 It's impossible to fetch all values and save them to the cache if the cache doesn't exist. \
 Either disable fetchAll or enable caching.");
                 throw err;
@@ -92,11 +105,6 @@ Either disable fetchAll or enable caching.");
                 this.cache.push(row);
             }
         }
-
-
-        Object.defineProperty(this, "options", {
-            value: options
-        });
     }
 
     /**
@@ -104,14 +112,14 @@ Either disable fetchAll or enable caching.");
      * @param {*} columnValue Value of the column to search by.
      * @returns {*} Value retreived from the table.
      */
-    get(columnName, columnValue) {
+    get(columnName: string, columnValue: any) {
         let dbValue;
-        let cacheValue = {};
+        let cacheValue: LooseObject = {};
 
-        if (this.options.caching) { // Check if the row exists in the cache
+        if (this.caching) { // Check if the row exists in the cache
             for (let i = 0; i < this.cache.length; i++) {
                 const row = this.cache[i];
-                if (row[columnName] === columnValue) {
+                if (row[columnName] == columnValue) {
                     cacheValue.result = row;
                     cacheValue.index = i;
                     break;
@@ -127,7 +135,7 @@ Either disable fetchAll or enable caching.");
         dbValue = this._parseKeys(dbValue);
 
         // Save the value to the cache, or update the existing one
-        if (dbValue && this.options.caching) {
+        if (dbValue && this.caching) {
             if (!cacheValue.result)
                 this.cache.push(dbValue);
             else if (cacheValue.result !== dbValue)
@@ -151,7 +159,7 @@ Either disable fetchAll or enable caching.");
     }
 
     /**
-     * @param {array|object} options
+     * @param {array<object>|object} options
      * @param {object} [options.where] Column parameters which should be used to search rows by. If not provided, a new row will be inserted.
      * @param {object} options.columns Columns to insert/modify.
      * @returns {object|boolean} New column values of the row or `false` if no rows were modified. 
@@ -167,22 +175,22 @@ Either disable fetchAll or enable caching.");
      *     }
      * })
     */
-    set(rows) {
-        if (!rows || (rows.constructor !== Object && rows.constructor !== Array)) {
+    set(rowOrRows: object[] | object) {
+        if (!rowOrRows || (rowOrRows.constructor !== Object && rowOrRows.constructor !== Array)) {
             const err =
-                new SQLiteError("No rows were provided or their type was invalid. To set a single row, an object should be given, or an array if multiple rows should be set.");
+                new SQLiteHelperError("No rows were provided or their type was invalid.\
+To set a single row, an object should be given, or an array if multiple rows should be set.");
             throw err;
         }
 
         // If only a single row was given, convert it to an array for easier handling
-        if (rows.constructor === Object)
-            rows = [rows];
+        const rows: object[] = typeof rowOrRows === 'object' ? [rowOrRows] : rowOrRows;
 
         const values = [];
         const queries = [];
 
-        for (let row of rows) {
-            row = row || {};
+        for (let i = 0; i < rows.length; i++) {
+            let row: LooseObject = rows[i] || {};
             if (!row.columns) {
                 const columns = row;
                 row = {
@@ -197,10 +205,11 @@ Either disable fetchAll or enable caching.");
         this._set(queries);
 
 
-        for (const row of rows) {
+        for (let i = 0; i < rows.length; i++) {
+            const row: LooseObject = rows[i];
 
             let oldCacheValue;
-            if (this.options.caching && row.where) {
+            if (this.caching && row.where) {
                 // Remove the old value from the cache 
                 // (only after writing the new value to the database, so that if writing the new value fails, the old cache value will not be removed)
                 for (let i = 0; i < this.cache.length; i++) {
@@ -221,19 +230,17 @@ Either disable fetchAll or enable caching.");
             for (const key in row.columns) {
                 valuesObject[key] = row.columns[key];
             }
-            valuesObject = this._parseKeys(valuesObject);
 
-            if (this.options.caching) {
+            if (this.caching) {
                 this.cache.push(valuesObject);
             }
 
-            if (typeof this.changedCB === 'function') {
-                this.changedCB(valuesObject);
-            }
+            this.changedCB(valuesObject);
+
             values.push(valuesObject);
         }
 
-        let returnValue = values; // By default, the returned value will be the array of values.
+        let returnValue: LooseObject = values; // By default, the returned value will be the array of values.
         if (returnValue.length === 1) // If the array only has one value, only return its first element.
             returnValue = returnValue[0];
 
@@ -247,7 +254,7 @@ Either disable fetchAll or enable caching.");
      * @param {*} columnValue Value of the column to search by.
      * @returns {boolean} Whether a row with the provided column name and value exists.
      */
-    has(columnName, columnValue) {
+    has(columnName: string, columnValue: any) {
         return !!this.get(columnName, columnValue);
     }
 
@@ -258,7 +265,7 @@ Either disable fetchAll or enable caching.");
      * @param {object} ensureValue Value of the columns to be ensured if the row does not exist.
      * @returns {*} Ensured value
      */
-    ensure(columnName, columnValue, ensureValue) {
+    ensure(columnName: string, columnValue: any, ensureValue: object) {
         let value = this.get(columnName, columnValue);
 
         if (!value)
@@ -275,10 +282,10 @@ Either disable fetchAll or enable caching.");
      * @param {*} columnValue Value of the column to search by.
      * @returns {number} Number of rows that were deleted.
      */
-    delete(columnName, columnValue) {
+    delete(columnName: string, columnValue: any) {
         const info = this.db.prepare(`DELETE FROM ${this.name} WHERE ${columnName} = ?`).run(columnValue);
-        if (this.options.caching) {
-            const columnObject = {};
+        if (this.caching) {
+            const columnObject: LooseObject = {};
             columnObject[columnName] = columnValue;
             for (let i = 0; i < this.cache.length; i++) {
                 const value = this.cache[i];
@@ -297,14 +304,14 @@ Either disable fetchAll or enable caching.");
      * @param {*} [columnValue] Value of the column to search by.
      * @returns {boolean} Whether the deletion was successful.
      */
-    uncache(columnName, columnValue) {
-        if (!this.options.cache)
+    uncache(columnName?: string, columnValue?: any) {
+        if (!this.caching)
             return false;
         if (columnName !== undefined && columnValue !== undefined) {
             // Remove the value from the cache
             for (let i = 0; i < this.cache.length; i++) {
                 const value = this.cache[i];
-                const columnObject = {};
+                const columnObject: LooseObject = {};
                 columnObject[columnName] = columnValue;
                 if (stringify(value) === stringify(columnObject)) {
                     this.cache.splice(i, 1);
@@ -316,30 +323,28 @@ Either disable fetchAll or enable caching.");
         }
 
         else {
-            this.cache.length = [];
+            this.cache.length = 0;
             return !this.cache.length;
         }
     }
 
-    indexes(columnName) {
+    indexes(columnName: string) {
         const dbValue = this.db.prepare(`SELECT ${columnName} FROM ${this.name}`).all();
 
-        return dbValue.map(row => row[columnName]);
+        return dbValue.map((row: LooseObject) => row[columnName]);
     }
 
-    changed(cb) {
-        Object.defineProperty(this, 'changedCB', {
-            value: cb
-        })
+    changed(cb: (newValue: LooseObject) => void) {
+        this.changedCB = cb;
     }
 
-    _createQuery(row) {
+    private _createQuery(row: LooseObject) {
         let columnNames = Object.keys(row.columns);
         let values = [];
         if (!row.columns || row.columns.constructor !== Object)
-            throw new SQLiteError('No columns were provided. They are required to modify/create a row.')
+            throw new SQLiteHelperError('No columns were provided. They are required to modify/create a row.')
         let columnsStatement;
-        let whereValues = [];
+        let whereValues: object[] = [];
 
         let query;
         if (row.where) {
@@ -375,10 +380,11 @@ Either disable fetchAll or enable caching.");
         };
     }
 
-    _set(rows) {
-        const infos = [];
+    private _set(rows: object[]) {
+        const infos: object[] = [];
         const transaction = this.db.transaction(() => {
-            for (let row of rows) {
+            for (let i = 0; i < rows.length; i++) {
+                const row: LooseObject = rows[i];
                 const { query, values, whereValues } = row;
                 const stmt = this.db.prepare(query);
                 const info = stmt.run(values, whereValues);
@@ -390,7 +396,7 @@ Either disable fetchAll or enable caching.");
         return infos;
     }
 
-    _parseKeys(object) {
+    private _parseKeys(object: LooseObject) {
         for (let key in object) {
             try {
                 object[key] = parse(object[key]);
@@ -400,4 +406,4 @@ Either disable fetchAll or enable caching.");
     }
 }
 
-module.exports = SQLite;
+export = SQLiteHelper;

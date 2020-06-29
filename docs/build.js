@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = './docs/api.md';
 
 jsdoc2md.render({
-    files: './src/index.js'
+    files: './dist/index.js'
 }).then(data => {
     fs.writeFileSync(path, data);
     console.log(`Successfully saved docs to ${path}`);
