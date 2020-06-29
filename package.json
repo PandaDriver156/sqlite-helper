@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "A tool to make interactions with sqlite databases easier",
   "types": "./dist/typings/index.d.ts",
-  "main": "src/index.js",
+  "main": "dist/index.js",
   "scripts": {
     "prepare": "tsc",
     "build:docs": "node ./docs/build.js"
