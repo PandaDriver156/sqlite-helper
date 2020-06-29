@@ -5,8 +5,7 @@
         "outDir": "./dist",
         "strict": true,
         "declaration": true,
-        "declarationDir": "./dist/typings",
-        "removeComments": true
+        "declarationDir": "./dist/typings"
     },
     "include": [
         "./src/**/*"
