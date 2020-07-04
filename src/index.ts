@@ -9,7 +9,7 @@ interface LooseObject {
     [key: string]: any
 }
 
-interface constructorOptions {
+interface ConstructorOptions {
     tableName?: string,
     dir?: PathLike,
     filename?: string,
@@ -58,7 +58,7 @@ class SQLiteHelper {
     *   wal: true
     * });
     */
-    constructor(options: constructorOptions) {
+    constructor(options: ConstructorOptions) {
 
         this.tableName = options.tableName || "";
         this.dir = options.dir || "./data";
@@ -68,7 +68,7 @@ class SQLiteHelper {
         this.fetchAll = options.fetchAll || false;
         this.wal = options.wal || false;
 
-        if (!existsSync(this.dir)) // Check whether the provided folder exists 
+        if (!existsSync(this.dir)) // Check whether the provided folder exists
             mkdirSync(this.dir);   // Create it if it doesn't
 
         const path = resolve(process.cwd(), `${this.dir}/${this.filename}`);
@@ -85,7 +85,7 @@ class SQLiteHelper {
             if (!Object.keys(this.columns).length)
                 throw new SQLiteHelperError(`No columns were provided and the "${this.name}" table doesn't exist. Columns are required to ensure at table creation.`);
 
-            let columnsStatement = Object.keys(this.columns).map(columnName => {
+            const columnsStatement = Object.keys(this.columns).map(columnName => {
                 return `${columnName} ${this.columns[columnName].type}`;
             });
 
@@ -114,7 +114,7 @@ Either disable fetchAll or enable caching.");
      */
     get(columnName: string, columnValue: any) {
         let dbValue;
-        let cacheValue: LooseObject = {};
+        const cacheValue: LooseObject = {};
 
         if (this.caching) { // Check if the row exists in the cache
             for (let i = 0; i < this.cache.length; i++) {
@@ -162,7 +162,7 @@ Either disable fetchAll or enable caching.");
      * @param {array<object>|object} options
      * @param {object} [options.where] Column parameters which should be used to search rows by. If not provided, a new row will be inserted.
      * @param {object} options.columns Columns to insert/modify.
-     * @returns {object|boolean} New column values of the row or `false` if no rows were modified. 
+     * @returns {object|boolean} New column values of the row or `false` if no rows were modified.
      * NOTE: If caching is not enabled, only changed column values will be returned.
      * @example
      * sqlite.set({
@@ -174,7 +174,7 @@ Either disable fetchAll or enable caching.");
      *         last_name: 'Jonas'
      *     }
      * })
-    */
+     */
     set(rowOrRows: object[] | object) {
         if (!rowOrRows || (rowOrRows.constructor !== Object && rowOrRows.constructor !== Array)) {
             const err =
@@ -194,7 +194,7 @@ To set a single row, an object should be given, or an array if multiple rows sho
             if (!row.columns) {
                 const columns = row;
                 row = {
-                    columns: columns
+                    columns
                 };
             }
 
@@ -210,22 +210,22 @@ To set a single row, an object should be given, or an array if multiple rows sho
 
             let oldCacheValue;
             if (this.caching && row.where) {
-                // Remove the old value from the cache 
+                // Remove the old value from the cache
                 // (only after writing the new value to the database, so that if writing the new value fails, the old cache value will not be removed)
-                for (let i = 0; i < this.cache.length; i++) {
-                    const value = this.cache[i];
+                for (let j = 0; j < this.cache.length; j++) {
+                    const value = this.cache[j];
 
                     for (const key in row.where) {
                         if (value[key] === row.where[key]) {
                             oldCacheValue = value;
-                            this.cache.splice(i, 1);
+                            this.cache.splice(j, 1);
                             break;
                         }
                     }
                 }
             }
 
-            let valuesObject = oldCacheValue || {};
+            const valuesObject = oldCacheValue || {};
 
             for (const key in row.columns) {
                 valuesObject[key] = row.columns[key];
@@ -339,12 +339,10 @@ To set a single row, an object should be given, or an array if multiple rows sho
     }
 
     private _createQuery(row: LooseObject) {
-        let columnNames = Object.keys(row.columns);
+        const columnNames = Object.keys(row.columns);
         let values = [];
-        if (!row.columns || row.columns.constructor !== Object)
-            throw new SQLiteHelperError('No columns were provided. They are required to modify/create a row.')
         let columnsStatement;
-        let whereValues: object[] = [];
+        const whereValues: object[] = [];
 
         let query;
         if (row.where) {
@@ -355,14 +353,14 @@ To set a single row, an object should be given, or an array if multiple rows sho
                 values.push(value);
                 return `${columnName} = ?`;
             }).join(', ');
-            let whereStatement = "WHERE " + Object.keys(row.where).map(whereCheck => {
+            const whereStatement = "WHERE " + Object.keys(row.where).map(whereCheck => {
                 whereValues.push(row.where[whereCheck]);
                 return `${whereCheck} = ?`;
             }).join(' AND');
             query = `UPDATE ${this.name} SET ${columnsStatement} ${whereStatement}`;
         }
         else {
-            let columnNamesString = columnNames.join(', ');
+            const columnNamesString = columnNames.join(', ');
             values = columnNames.map(columnName => {
                 let value = row.columns[columnName];
                 if (value.constructor === Object || value.constructor === Array)
@@ -374,9 +372,9 @@ To set a single row, an object should be given, or an array if multiple rows sho
         }
 
         return {
-            query: query,
-            values: values,
-            whereValues: whereValues
+            query,
+            values,
+            whereValues
         };
     }
 
@@ -397,7 +395,7 @@ To set a single row, an object should be given, or an array if multiple rows sho
     }
 
     private _parseKeys(object: LooseObject) {
-        for (let key in object) {
+        for (const key in object) {
             try {
                 object[key] = parse(object[key]);
             } catch { }
