@@ -86,7 +86,7 @@ class SQLiteHelper {
                 throw new SQLiteHelperError(`No columns were provided and the "${this.name}" table doesn't exist. Columns are required to ensure at table creation.`);
 
             const columnsStatement = Object.keys(this.columns).map(columnName => {
-                return `${columnName} ${this.columns[columnName].type}`;
+                return `${columnName} ${this.columns[columnName]}`;
             });
 
             this.db.prepare(`CREATE TABLE ${this.name} (${columnsStatement.join(', ')})`).run();
@@ -184,7 +184,7 @@ To set a single row, an object should be given, or an array if multiple rows sho
         }
 
         // If only a single row was given, convert it to an array for easier handling
-        const rows: object[] = typeof rowOrRows === 'object' ? [rowOrRows] : rowOrRows;
+        const rows: object[] = rowOrRows.constructor === Object ? [rowOrRows] : Array(rowOrRows);
 
         const values = [];
         const queries = [];
