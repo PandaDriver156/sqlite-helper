@@ -184,7 +184,7 @@ To set a single row, an object should be given, or an array if multiple rows sho
         }
 
         // If only a single row was given, convert it to an array for easier handling
-        const rows: object[] = rowOrRows.constructor === Object ? [rowOrRows] : Array(rowOrRows);
+        const rows: object[] = rowOrRows.constructor === Array ? rowOrRows : [rowOrRows];
 
         const values = [];
         const queries = [];
